@@ -9,8 +9,9 @@ this.connectFirebase()
     this.progressBarEl = this.snackModalEl.querySelector('.mc-progress-bar-fg')
     this.nameFileEl = this.snackModalEl.querySelector('.filename')
     this.timeleftEl = this.snackModalEl.querySelector('.timeleft')
-
+     this.listFilesEl = document.querySelector('#list-of-files-and-directories')
     this.initEvents();
+    this.readFiles(); 
   }
 //configuração para coneção ao firebase
   connectFirebase(){
@@ -31,16 +32,38 @@ this.connectFirebase()
     this.btnSendFileEl.addEventListener("click", (event) => {
       this.inputFilesEl.click();
     });
-
+//observação: não estamos salvando o arquivo, e sim suas informaçoes
     this.inputFilesEl.addEventListener("change", (event) => {
-      this.uploadTask(event.target.files);
+
+      this.btnSendFileEl.disabled = true;
+
+      this.uploadTask(event.target.files).then(respones => {
+      responses.forEach(resp => {
+          console.log(resp.files['input-file']);
+          this.getFirebase().push().set(resp.files['input-file']);
+      });
+          this.finishUpload();
+      }).catch(err => {
+        this.finishUpload();
+        console.error(err);
+
+      });
 
       this.modalShow();
 
-      this.inputFilesEl.value = "";
-
     });
   }
+ 
+  finishUpload(){
+    this.modalShow(false);
+    this.inputFilesEl.value = "";
+    this.btnSendFileEl.disabled = false;
+  };
+
+  getFirebase(){
+return ferebase.database().ref('files')
+
+  };
 
   modalShow(show = true) {
     this.snackModalEl.style.display = (show) ? "block" : "none"
@@ -287,13 +310,35 @@ this.connectFirebase()
     }
   }
 
-  getFileView(file) {
-    return `
-      <li>
+  getFileView(file, key) {
+     let li = document.createElement('li');
+     li.dataset.key = key;
+      li.innerHTML = 
+      `
+     
         ${this.getFileIconView(file)}
         <div class="name text-center">${file.name}s</div>
-      </li>
+      
     `
+    return li ;
   }
+
+  readFiles(){
+      this.getFirebaseRef().on('value' , snapshot => {
+        this.listFilesEl.innerHTML = '';
+     snapshot.forEach(snapshotItem => {
+        let key = snapshotItem.key;
+        let data = snapshotItem.val();
+        console.log(key, data);
+
+        this.listFilesEl.appendChild(this.getFileView(data, key))
+
+     })
+        
+
+
+      })
+
+  };
 
 }
